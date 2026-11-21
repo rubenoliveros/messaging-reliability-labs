@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sandbox · Messaging Reliability Labs</title><meta name="description" content="Free-play RabbitMQ and Kafka simulators: break things on purpose and reconcile.">
+<link rel="stylesheet" href="assets/site.css"></head><body><div class="topbar"><div class="wrap"><a class="brand" href="index.html">Messaging Reliability Labs</a><a class="nav" href="index.html">Home</a><a class="nav" href="rabbitmq.html">RabbitMQ path</a><a class="nav" href="kafka.html">Kafka path</a><a class="nav on" href="sandbox.html">Sandbox</a><a class="nav" href="https://github.com/rubenoliveros/messaging-reliability-labs">GitHub</a></div></div>
+<main class="wrap">
+<section><h2>Sandbox</h2>
+<p class="sub">Free play. Everything from the guided paths, running continuously. Turn on failures, break the design on purpose (for example, switch idempotency off), then press <b>Reconcile</b> to see the damage. New here? Start with the <a href="rabbitmq.html">RabbitMQ path</a> or the <a href="kafka.html">Kafka path</a>.</p>
+<div class="card"><b>Challenges</b>
+<ol style="margin:6px 0 0 18px;padding:0">
+<li>RabbitMQ: make the ledger fail reconciliation using only the "Order" setting and crashes. Why did it happen?</li>
+<li>RabbitMQ: set failure rate to 60%, publish 20 events, and get back to "Reconciled" without changing the code.</li>
+<li>Kafka: produce a stale account status. Which checkbox did it take?</li>
+<li>Kafka: replay from offset 0 and keep the ledger correct. Then do it again with idempotency off.</li>
+<li>Kafka: set 4 consumers. What does the 4th one do, and why?</li>
+</ol></div>
+</section>
+<!-- ========================= RABBITMQ ========================= -->
+<section id="rabbit">
+  <h2>RabbitMQ simulator</h2>
+  <p class="sub">A direct exchange routes to <code>ledger.entries</code>. Transient failures go to delay queues (5s, 20s, 60s; shortened here) that dead-letter back to the main queue. After 4 attempts, or immediately for poison, messages go to the DLQ.</p>
+  <div class="sim">
+    <div class="controls">
+      <div class="group">
+        <button class="btn primary" id="r-pub">Publish 10 events</button>
+        <button class="btn" id="r-poison">Send poison</button>
+        <button class="btn" id="r-redrive">Redrive DLQ</button>
+        <button class="btn" id="r-recon">Reconcile</button>
+      </div>
+      <span class="sep"></span>
+      <label><input type="checkbox" id="r-dup"> Partner resends (~30%)</label>
+      <label>Failure rate <select id="r-fail"><option value="0">0%</option><option value="0.3">30%</option><option value="0.6">60%</option></select></label>
+      <label><input type="checkbox" id="r-crash"> Crash after write (20%)</label>
+      <label>Order <select id="r-order"><option value="commit">commit, then ack</option><option value="ack">ack, then commit</option></select></label>
+      <label><input type="checkbox" id="r-idem" checked> Idempotent insert</label>
+      <span class="sep"></span>
+      <div class="group">
+        <button class="btn" id="r-play">Pause</button>
+        <label>Speed <select id="r-speed"><option value="900">slow</option><option value="500" selected>normal</option><option value="200">fast</option></select></label>
+        <button class="btn" id="r-reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="lanes r-lanes">
+      <div class="lane"><h4>ledger.entries <span id="r-main-n">0</span></h4><div class="chips" id="r-main"></div></div>
+      <div class="lane"><h4>retry queues <span id="r-retry-n">0</span></h4><div id="r-retry" class="note"></div></div>
+      <div class="lane"><h4>DLQ <span id="r-dlq-n">0</span></h4><div class="chips" id="r-dlq"></div></div>
+      <div class="lane"><h4>consumer</h4><div class="consumer" id="r-consumer"><div class="what note">waiting</div></div></div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <div class="log" id="r-log"></div>
+        <div class="recon" id="r-recon-out"></div>
+      </div>
+      <div>
+        <table><thead><tr><th>Account</th><th class="num">Charges</th><th class="num">Payments</th><th class="num">Balance</th></tr></thead><tbody id="r-bal"></tbody></table>
+        <div class="stats" id="r-stats"></div>
+      </div>
+    </div>
+    <div class="legend"><span class="chip">e7 normal</span><span class="chip dup">e7 resend</span><span class="chip redel">e7 redelivered</span><span class="chip poison">bad poison</span></div>
+  </div>
+</section>
+
+<!-- ========================= KAFKA ========================= -->
+<section id="kafka">
+  <h2>Kafka simulator</h2>
+  <p class="sub">Topic <code>ledger.events</code> has 3 partitions; records are keyed by account, so each account always lands in the same partition. The consumer group splits partitions between consumers. Blue outline = next record to read; green edge = committed offset. Records stay in the log after they're read.</p>
+  <div class="sim">
+    <div class="controls">
+      <div class="group">
+        <button class="btn primary" id="k-pub">Publish 10 entries</button>
+        <button class="btn" id="k-status">Send shuffled status versions</button>
+        <button class="btn" id="k-poison">Send poison</button>
+        <button class="btn" id="k-replay">Replay from offset 0</button>
+        <button class="btn" id="k-redrive">Redrive DLQ</button>
+        <button class="btn" id="k-recon">Reconcile</button>
+      </div>
+      <span class="sep"></span>
+      <label>Consumers <select id="k-cons"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+      <label><input type="checkbox" id="k-dup"> Partner resends (~30%)</label>
+      <label>Failure rate <select id="k-fail"><option value="0">0%</option><option value="0.3">30%</option><option value="0.6">60%</option></select></label>
+      <label><input type="checkbox" id="k-crash"> Crash after write (15%)</label>
+      <label>Offset commit <select id="k-order"><option value="after">after DB write</option><option value="before">before DB write</option></select></label>
+      <label><input type="checkbox" id="k-idem" checked> Idempotent insert</label>
+      <label><input type="checkbox" id="k-ver" checked> Versioned upsert</label>
+      <span class="sep"></span>
+      <div class="group">
+        <button class="btn" id="k-play">Pause</button>
+        <label>Speed <select id="k-speed"><option value="900">slow</option><option value="500" selected>normal</option><option value="200">fast</option></select></label>
+        <button class="btn" id="k-reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="parts" id="k-parts"></div>
+
+    <div class="row2">
+      <div>
+        <div class="log" id="k-log"></div>
+        <div class="recon" id="k-recon-out"></div>
+      </div>
+      <div>
+        <table><thead><tr><th>Account</th><th class="num">Balance</th><th>Status (version)</th></tr></thead><tbody id="k-bal"></tbody></table>
+        <div class="stats" id="k-stats"></div>
+        <div class="lane" style="margin-top:8px;min-height:50px"><h4>ledger.events.dlq <span id="k-dlq-n">0</span></h4><div class="chips" id="k-dlq"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+</main><footer class="wrap">Built by Rubén Oliveros as a learning lab. Simulators and animations are simplified teaching models; the official documentation linked in each chapter is the authority.</footer>
+<script src="assets/sandbox.js"></script></body></html>

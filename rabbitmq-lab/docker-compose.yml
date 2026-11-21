@@ -1,0 +1,29 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rmqlab-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP (apps connect here)
+      - "15672:15672"   # Management UI: http://localhost:15672  (guest / guest)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:16
+    container_name: rmqlab-postgres
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: ledger
+    ports:
+      - "5433:5432"     # 5433 on your machine so it doesn't clash with a local Postgres
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 20

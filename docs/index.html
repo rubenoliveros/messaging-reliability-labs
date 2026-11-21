@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messaging Reliability Labs</title><meta name="description" content="Learn RabbitMQ and Kafka reliability from scratch: guided interactive chapters, simulators and runnable labs.">
+<link rel="stylesheet" href="assets/site.css"></head><body><div class="topbar"><div class="wrap"><a class="brand" href="index.html">Messaging Reliability Labs</a><a class="nav on" href="index.html">Home</a><a class="nav" href="rabbitmq.html">RabbitMQ path</a><a class="nav" href="kafka.html">Kafka path</a><a class="nav" href="sandbox.html">Sandbox</a><a class="nav" href="https://github.com/rubenoliveros/messaging-reliability-labs">GitHub</a></div></div>
+<header style="border-bottom:0;background:transparent"><div class="wrap">
+  <h1 style="margin-top:24px">Moving money between systems without losing it or counting it twice</h1>
+  <p class="sub">A guided, interactive introduction to RabbitMQ and Kafka for people who have never used them, with the settings, edge cases and official references that experienced engineers look for. Every chapter is built around one question: <b>what happens when something fails?</b></p>
+  <div class="btns">
+    <a class="btn primary" href="rabbitmq.html">Start with RabbitMQ</a>
+    <a class="btn primary" href="kafka.html">Start with Kafka</a>
+    <a class="btn" href="sandbox.html">Open the sandbox</a>
+    <a class="btn" href="https://codespaces.new/rubenoliveros/messaging-reliability-labs">Run the real labs in Codespaces</a>
+  </div>
+</div></header>
+<main class="wrap">
+<section id="scenario">
+  <h2>The scenario used everywhere</h2>
+  <div class="card">
+  <p>A partner system sends <b>charges</b> and <b>payments</b> for customer accounts. We store each one as a row in an append-only ledger, and an account's balance is <code>charges - payments</code>.</p>
+  <p>Networks fail, programs crash and partners resend. Every chapter shows one of those failures step by step, and the design choice that keeps the ledger correct. At the end, a <b>reconciliation</b> compares what the partner sent with what we stored, to prove it.</p>
+  </div>
+</section>
+<section>
+  <h2>Choose a path</h2>
+  <div class="paths">
+    <a class="pathcard" href="rabbitmq.html"><h3>The RabbitMQ path</h3><div class="meta">6 chapters · about 25 minutes</div>
+      <p>A message broker that routes messages to queues and forgets them once they're acknowledged.</p>
+      <p class="note">How a message travels · Acks · Idempotency · Prefetch and order · Retries with delay queues · Poison messages, DLQ and redrive</p></a>
+    <a class="pathcard" href="kafka.html"><h3>The Kafka path</h3><div class="meta">7 chapters · about 30 minutes</div>
+      <p>A distributed log where records stay put and each reader keeps its own bookmark.</p>
+      <p class="note">A log, not a queue · Keys and order · Consumer groups · Committing offsets · acks and replicas · Exactly-once, honestly · Retries, DLQ, lag and replay</p></a>
+  </div>
+</section>
+<section>
+  <h2>How each chapter works</h2>
+  <div class="grid-lessons">
+    <div class="card"><h3>1. Picture it</h3><p>An everyday analogy before any jargon. Underlined terms show a definition on hover or tap.</p></div>
+    <div class="card"><h3>2. Predict</h3><p>A question about what will happen. Guessing first, even wrong, makes the answer stick.</p></div>
+    <div class="card"><h3>3. Watch it happen</h3><p>A step-by-step animation you control, with a narration of each step.</p></div>
+    <div class="card"><h3>4. Go deeper</h3><p>Why it matters, an interview-ready sentence, expert details, the matching lab code and links to the official docs.</p></div>
+  </div>
+</section>
+<section id="compare">
+  <h2>RabbitMQ vs Kafka</h2>
+  <div class="card">
+    <table class="compare">
+      <thead><tr><th></th><th>RabbitMQ</th><th>Kafka</th></tr></thead>
+      <tbody>
+        <tr><th>Model</th><td>Broker routes messages to queues; a message is deleted when acked.</td><td>Partitioned, replicated log; consumers track their position with offsets.</td></tr>
+        <tr><th>Ordering</th><td>Per queue, with a single consumer.</td><td>Per partition; key by entity.</td></tr>
+        <tr><th>Scaling</th><td>Competing consumers on a queue; <code>prefetch</code> limits unacked messages.</td><td>Partitions are the unit of parallelism; one partition per consumer in a group.</td></tr>
+        <tr><th>Retries</th><td>Delay queues (TTL + dead-letter exchange) or the delayed-message plugin; DLQ.</td><td>Short blocking retries keep order; retry or DLQ topics for longer ones.</td></tr>
+        <tr><th>Replay</th><td>Acked messages are gone: redrive the DLQ or ask the source to resend.</td><td>Move the group's offsets back; safe if consumers are idempotent.</td></tr>
+        <tr><th>Health metric</th><td>Queue depth, unacked count, DLQ depth.</td><td>Consumer lag per partition, DLQ volume.</td></tr>
+        <tr><th>Good for</th><td>Work queues, routing, per-message handling.</td><td>Event streams, many independent consumers, history and replay.</td></tr>
+      </tbody>
+    </table>
+    <div class="say"><b>One sentence</b>"Whatever the broker, I build consumers the same way: idempotent, ack or commit after the write, capped retries with backoff, a DLQ with a redrive process, correlation IDs, and a reconciliation job."</div>
+  </div>
+</section>
+
+<section id="run">
+  <h2>Run the real labs</h2>
+  <div class="card">
+    <p>The simulators are teaching models. The repo contains two runnable labs with real brokers, Postgres and Python consumers, each with 7 to 8 exercises.</p>
+    <p><b>In the browser (no install):</b> click <a href="https://codespaces.new/rubenoliveros/messaging-reliability-labs">Open in Codespaces</a>. Docker, Python and the dependencies are set up for you. Then:</p>
+<pre>cd rabbitmq-lab &amp;&amp; docker compose up -d     # RabbitMQ UI on port 15672
+# or
+cd kafka-lab &amp;&amp; docker compose up -d && python create_topics.py   # Kafka UI on port 8080</pre>
+    <p><b>On your machine:</b> Docker Desktop and Python 3.11+, then follow each lab's README.</p>
+    <p class="note">Run one lab at a time in a Codespace to keep memory comfortable.</p>
+  </div>
+</section>
+
+
+<section id="run">
+  <h2>Run the real labs</h2>
+  <div class="card">
+    <p>The animations are teaching models. The repo has two runnable labs with real brokers, Postgres and Python consumers.</p>
+    <p><b>In the browser (no install):</b> <a href="https://codespaces.new/rubenoliveros/messaging-reliability-labs">open in GitHub Codespaces</a>, then follow the README.</p>
+    <p><b>On your machine:</b> Docker Desktop and Python 3.11+, then each lab's README.</p>
+  </div>
+</section>
+</main><footer class="wrap">Built by Rubén Oliveros as a learning lab. Simulators and animations are simplified teaching models; the official documentation linked in each chapter is the authority.</footer>
+<script src="assets/guide.js"></script></body></html>
